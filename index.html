@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doodax SPEEDTEST - Measure Your Internet Speed</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Test your internet speed in seconds with our free, accurate bandwidth test. Measure your download, upload, ping, and jitter from any device. Powered by doodax.com." />
+    <meta name="keywords" content="internet speed test, speed test, bandwidth test, download speed, upload speed, ping test, latency, jitter, doodax" />
+    <meta name="author" content="HSINI MOHAMED" />
+    <link rel="canonical" href="https://doodax.com" />
+    <link rel="icon" href="/public/favicon.svg" type="image/svg+xml">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+      
+      @keyframes moveNebula {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      body {
+        font-family: 'Montserrat', sans-serif;
+        color: #E0E7FF;
+        background-color: #040615;
+        background-image:
+          radial-gradient(circle at 15% 85%, rgba(140, 102, 224, 0.4), transparent 50%),
+          radial-gradient(circle at 85% 25%, rgba(70, 102, 204, 0.4), transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(224, 110, 175, 0.3), transparent 40%);
+        background-size: 250% 250%;
+        animation: moveNebula 100s ease infinite;
+      }
+
+      .start-button-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        cursor: pointer;
+      }
+
+      #startButton {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: none;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 600;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        transition: all 0.3s ease;
+      }
+      
+      #startButton.testing {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .start-ring, .start-background, .start-border {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        transition: all 0.3s ease;
+      }
+      .start-background {
+        width: 160px;
+        height: 160px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255,255,255,0.1);
+      }
+      .start-border {
+        width: 200px;
+        height: 200px;
+        border: 2px solid rgba(79, 70, 229, 0.5);
+      }
+      .start-ring {
+        width: 260px;
+        height: 260px;
+        border: 1px solid rgba(79, 70, 229, 0.2);
+        opacity: 0;
+      }
+      
+      .start-button-container:hover .start-background {
+        background-color: #4F46E5;
+      }
+      .start-button-container:hover .start-border {
+        transform: translate(-50%, -50%) scale(1.05);
+        border-color: #6366f1;
+      }
+
+      .start-button-container.testing .start-border {
+        animation: pulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
+      }
+       .start-button-container.testing .start-ring {
+        animation: pulse 2s infinite cubic-bezier(0.66, 0, 0, 1) 0.5s;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          transform: translate(-50%, -50%) scale(0.95);
+          opacity: 0.5;
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.1);
+          opacity: 1;
+        }
+      }
+
+      #liveSpeedDisplay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+      }
+      
+      .start-button-container.testing #liveSpeedDisplay {
+        opacity: 1;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(11, 12, 27, 0.8);
+        backdrop-filter: blur(5px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+      }
+      .modal-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+      .modal-content {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        max-width: 90%;
+        width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+      }
+       .modal-overlay.visible .modal-content {
+        transform: scale(1);
+      }
+    </style>
+</head>
+<body class="text-gray-300">
+    <div class="min-h-screen flex flex-col">
+        <header class="w-full px-4 md:px-8 py-4">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-8">
+                    <a href="/" class="text-2xl font-bold tracking-wider text-white">Doodax SPEEDTEST</a>
+                    <nav class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="#" class="modal-trigger hover:text-white" data-modal="header-apps">Apps</a>
+                        <a href="#" class="modal-trigger hover:text-white" data-modal="header-learn">Learn</a>
+                        <a href="#" class="modal-trigger hover:text-white" data-modal="header-data">Data</a>
+                        <a href="#" class="modal-trigger hover:text-white" data-modal="about">About</a>
+                    </nav>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="#" class="modal-trigger hidden md:inline-block text-sm py-2 px-3 rounded-full border border-gray-600 hover:border-white hover:text-white" data-modal="header-settings">Settings</a>
+                    <a href="#" class="modal-trigger hidden md:inline-block text-sm hover:text-white" data-modal="header-results">Results</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow flex flex-col items-center justify-center p-4">
+            <div class="flex justify-between items-center w-full max-w-2xl mb-8">
+                <!-- Download -->
+                <div class="text-center">
+                    <div class="flex items-center justify-center gap-2 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7z" clip-rule="evenodd" /></svg>
+                        <span>DOWNLOAD <span class="text-xs">Mbps</span></span>
+                    </div>
+                    <span id="downloadValue" class="text-4xl md:text-5xl font-bold text-white">--</span>
+                </div>
+                <!-- Upload -->
+                 <div class="text-center">
+                    <div class="flex items-center justify-center gap-2 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" /></svg>
+                        <span>UPLOAD <span class="text-xs">Mbps</span></span>
+                    </div>
+                    <span id="uploadValue" class="text-4xl md:text-5xl font-bold text-white">--</span>
+                </div>
+            </div>
+
+            <div class="flex justify-around items-center w-full max-w-4xl">
+                <div id="networkInfo" class="text-center text-sm md:text-base">
+                    <div class="font-semibold text-white">Your Network</div>
+                    <div class="text-gray-400"></div>
+                </div>
+
+                <div id="start-button-container" class="start-button-container">
+                    <div class="start-border"></div>
+                    <div class="start-background"></div>
+                    <div class="start-ring"></div>
+                    <button id="startButton">GO</button>
+                    <div id="liveSpeedDisplay">
+                        <div id="liveStatus" class="text-xl text-indigo-400 uppercase tracking-widest mb-2 font-semibold"></div>
+                        <span id="speedValue" class="text-6xl font-bold text-white">0.00</span>
+                        <div class="text-lg text-gray-400">Mbps</div>
+                    </div>
+                </div>
+
+                <div id="serverLocation" class="text-center text-sm md:text-base">
+                    <div class="font-semibold text-white">Test Server</div>
+                     <div class="text-gray-400"></div>
+                </div>
+            </div>
+
+            <div id="chartContainer" class="w-full max-w-4xl mx-auto mt-4 hidden" style="height: 150px;">
+                <canvas id="speedChart"></canvas>
+            </div>
+
+            <div class="flex gap-8 md:gap-16 text-center mt-8">
+                <div>
+                    <div class="text-gray-400">Ping</div>
+                    <p class="text-xl text-white font-semibold"><span id="pingValue">--</span> ms</p>
+                </div>
+                <div>
+                    <div class="text-gray-400">Jitter</div>
+                    <p class="text-xl text-white font-semibold"><span id="jitterValue">--</span> ms</p>
+                </div>
+            </div>
+            <p id="statusText" class="text-gray-400 h-6 mt-4"></p>
+        </main>
+
+        <section class="w-full py-12 bg-black bg-opacity-20">
+            <div class="max-w-5xl mx-auto px-4">
+                <div class="flex justify-center gap-4 mb-8">
+                    <button class="py-2 px-5 rounded-full border border-gray-500 hover:bg-white hover:text-black transition">Create an Account</button>
+                    <button class="py-2 px-5 rounded-full border border-gray-500 hover:bg-white hover:text-black transition">Results History</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-center">
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-desktop-apps">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        <span>Desktop Apps</span>
+                    </a>
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-troubleshoot">
+                         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Troubleshoot</span>
+                    </a>
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-outages">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h8a2 2 0 002-2v-1a2 2 0 012-2h1.945M7.722 16.522a.375.375 0 10-.528.528l4.47 4.47a.375.375 0 00.528 0l4.47-4.47a.375.375 0 10-.528-.528L12 20.754l-4.278-4.232zM13 3.75l-4 5.25h8l-4-5.25z"></path></svg>
+                        <span>Check Outages</span>
+                    </a>
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-isp">
+                         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Talk to your ISP</span>
+                    </a>
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-how-much">
+                       <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span>How Much Speed?</span>
+                    </a>
+                    <a href="#" class="modal-trigger tool-item flex flex-col items-center gap-2 text-cyan-300 hover:text-white" data-modal="tool-mobile-apps">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span>Mobile Apps</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="w-full py-12 px-4 md:px-8 bg-black bg-opacity-30 text-sm">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h4 class="font-bold text-white mb-4">Doodax SPEEDTEST</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-account">Account</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-advertise">Advertise</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-awards">Speedtest Awards™</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-servers">Speedtest Servers™</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">LEGAL</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="privacy">Privacy</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="terms">Terms</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="about">About</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">APPS</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-apps-android">Android</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-apps-appletv">Apple TV</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-apps-ios">iOS</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-apps-macos">macOS</a></li>
+                        <li><a href="#" class="modal-trigger hover:text-white" data-modal="footer-apps-windows">Windows</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="w-full mx-auto pt-4 border-t border-gray-700 text-center text-gray-400 text-xs">
+                <div class="flex justify-center gap-x-4 gap-y-2 flex-wrap mb-4">
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="about">About</a>
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="contact">Contact</a>
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="guide">Guide</a>
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="privacy">Privacy Policy</a>
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="terms">Terms of Service</a>
+                    <a href="#" class="modal-trigger hover:text-white" data-modal="dmca">DMCA</a>
+                </div>
+                <p>
+                    Powered by <a href="https://github.com/hsinidev" target="_blank" rel="noopener noreferrer" style="color: #FFD700;" class="hover:underline">HSINI MOHAMED</a>
+                </p>
+                <p class="mt-2 text-gray-500">© 2024 Doodax.com. All Rights Reserved.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Modal Container -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content relative">
+            <button id="modal-close" class="absolute top-2 right-4 text-2xl text-gray-400 hover:text-white">&times;</button>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-white"></h2>
+            <div id="modal-body" class="prose prose-invert max-w-none text-gray-300"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- SCRIPT INITIALIZATION ---
+        // This script is self-contained and requires NO build steps.
+        // It directly uses ES Modules from a CDN. Do not run `npm install`.
+        import SpeedTest from 'https://cdn.skypack.dev/@cloudflare/speedtest';
+
+        // --- DOM Element References ---
+        const startButton = document.getElementById('startButton');
+        const startButtonContainer = document.getElementById('start-button-container');
+        const statusText = document.getElementById('statusText');
+        const downloadValue = document.getElementById('downloadValue');
+        const uploadValue = document.getElementById('uploadValue');
+        const pingValue = document.getElementById('pingValue');
+        const jitterValue = document.getElementById('jitterValue');
+        const serverLocation = document.getElementById('serverLocation');
+        const networkInfo = document.getElementById('networkInfo');
+        const liveSpeedDisplay = document.getElementById('liveSpeedDisplay');
+        const speedValue = document.getElementById('speedValue');
+        const liveStatus = document.getElementById('liveStatus');
+        const chartContainer = document.getElementById('chartContainer');
+        let speedChart;
+        
+        // --- Defensive DOM Check ---
+        // Ensure all critical elements are on the page before proceeding.
+        const criticalElements = { startButton, startButtonContainer, statusText, downloadValue, uploadValue, pingValue, jitterValue, serverLocation, networkInfo, liveSpeedDisplay, speedValue, liveStatus, chartContainer };
+        for (const [id, el] of Object.entries(criticalElements)) {
+            if (!el) {
+                const errorMsg = `Critical UI element "#${id}" is missing. The application cannot start.`;
+                console.error(errorMsg);
+                document.body.innerHTML = `<div style="color: red; text-align: center; margin-top: 50px; font-family: sans-serif;"><h2>Application Error</h2><p>${errorMsg}</p></div>`;
+                throw new Error(errorMsg); // Halt script execution
+            }
+        }
+
+        // --- Chart Functions ---
+        const calculatePercentile = (measurements, percentile) => {
+            if (!measurements || measurements.length < 2) return 0;
+            const speeds = measurements.map(m => m.bps / 1_000_000).sort((a, b) => a - b);
+            const index = Math.floor(percentile * (speeds.length - 1));
+            return speeds[index] || 0;
+        };
+
+        const createChart = () => {
+            if (speedChart) {
+                speedChart.destroy();
+            }
+            const speedChartCanvas = document.getElementById('speedChart').getContext('2d');
+            speedChart = new Chart(speedChartCanvas, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Speed',
+                        data: [],
+                        borderColor: 'orange',
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                        tension: 0.4,
+                        pointRadius: 0,
+                    }, {
+                        label: '90th percentile',
+                        data: [],
+                        borderColor: 'rgba(224, 231, 255, 0.5)',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        fill: false,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)', drawBorder: false },
+                            ticks: { color: '#E0E7FF', maxTicksLimit: 5, callback: (value) => `${value}` },
+                            title: { display: true, text: 'Mbps', color: '#E0E7FF', align: 'start', padding: { bottom: 5 } }
+                        }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    animation: false,
+                }
+            });
+        };
+
+        const updateChart = (measurements, type) => {
+            if (!speedChart || !measurements) return;
+            const speedChartCanvas = document.getElementById('speedChart').getContext('2d');
+
+            const dataPoints = measurements.map(m => (m.bps || 0) / 1_000_000);
+            speedChart.data.labels = dataPoints.map((_, i) => i);
+            speedChart.data.datasets[0].data = dataPoints;
+
+            const gradient = speedChartCanvas.createLinearGradient(0, 0, 0, 150);
+
+            if (type === 'download') {
+                gradient.addColorStop(0, 'rgba(255, 165, 0, 0.5)');
+                gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+                speedChart.data.datasets[0].borderColor = 'orange';
+                const p90 = calculatePercentile(measurements, 0.9);
+                speedChart.data.datasets[1].data = dataPoints.map(() => p90);
+            } else { // upload
+                gradient.addColorStop(0, 'rgba(160, 32, 240, 0.5)');
+                gradient.addColorStop(1, 'rgba(160, 32, 240, 0)');
+                speedChart.data.datasets[0].borderColor = '#A020F0';
+                speedChart.data.datasets[1].data = []; // Hide percentile line for upload
+            }
+            speedChart.data.datasets[0].backgroundColor = gradient;
+            speedChart.update('none');
+        };
+
+        // --- UI Update Functions ---
+        const resetUI = () => {
+            statusText.textContent = '';
+            pingValue.textContent = '--';
+            jitterValue.textContent = '--';
+            downloadValue.textContent = '--';
+            uploadValue.textContent = '--';
+            serverLocation.firstElementChild.textContent = 'Test Server';
+            serverLocation.lastElementChild.textContent = '';
+            networkInfo.firstElementChild.textContent = 'Your Network';
+            networkInfo.lastElementChild.textContent = '';
+            
+            startButton.textContent = 'GO';
+            startButton.disabled = false;
+            startButton.classList.remove('testing');
+            startButtonContainer.classList.remove('testing');
+
+            liveSpeedDisplay.classList.add('hidden');
+            liveStatus.textContent = '';
+            
+            chartContainer.classList.add('hidden');
+            if (speedChart) {
+                speedChart.data.labels = [];
+                speedChart.data.datasets[0].data = [];
+                speedChart.data.datasets[1].data = [];
+                speedChart.update();
+            }
+        };
+
+        const updateLiveSpeed = (mbps) => {
+            if (typeof mbps === 'number') {
+                speedValue.textContent = mbps.toFixed(2);
+            }
+        };
+
+        // --- Speed Test Logic ---
+        const speedTest = new SpeedTest({ autoStart: false });
+
+        speedTest.onRunningChange = (running) => {
+            startButton.disabled = running;
+            if (running) {
+                startButton.classList.add('testing');
+                startButtonContainer.classList.add('testing');
+                liveSpeedDisplay.classList.remove('hidden');
+                chartContainer.classList.remove('hidden');
+                createChart();
+            } else {
+                 startButton.textContent = 'Retest';
+                 startButton.classList.remove('testing');
+                 startButtonContainer.classList.remove('testing');
+                 liveSpeedDisplay.classList.add('hidden');
+            }
+        };
+
+        speedTest.onResultsChange = ({ type, measurements }) => {
+            if (!measurements || measurements.length === 0) return;
+            const last = measurements[measurements.length - 1];
+            if (!last) return;
+
+            switch (type) {
+                case 'ping':
+                    statusText.textContent = 'Testing latency...';
+                    liveStatus.textContent = 'Ping';
+                    if (last.ping != null) pingValue.textContent = Math.round(last.ping);
+                    if (last.jitter != null) jitterValue.textContent = last.jitter.toFixed(2);
+                    break;
+                case 'download':
+                    statusText.textContent = 'Testing download speed...';
+                    liveStatus.textContent = 'Download';
+                    if (last.bps != null) {
+                        const downloadMbps = last.bps / 1_000_000;
+                        downloadValue.textContent = downloadMbps.toFixed(2);
+                        updateLiveSpeed(downloadMbps);
+                        updateChart(measurements, 'download');
+                    }
+                    break;
+                case 'upload':
+                    statusText.textContent = 'Testing upload speed...';
+                    liveStatus.textContent = 'Upload';
+                    if (last.bps != null) {
+                        const uploadMbps = last.bps / 1_000_000;
+                        uploadValue.textContent = uploadMbps.toFixed(2);
+                        updateLiveSpeed(uploadMbps);
+                        updateChart(measurements, 'upload');
+                    }
+                    break;
+            }
+        };
+
+        speedTest.onFinish = (results) => {
+            statusText.textContent = 'Test complete.';
+            liveStatus.textContent = 'Done';
+            try {
+                if (results && typeof results.getSummary === 'function') {
+                    const summary = results.getSummary();
+                    if (summary) {
+                        if (summary.download != null) downloadValue.textContent = (summary.download / 1_000_000).toFixed(2);
+                        if (summary.upload != null) uploadValue.textContent = (summary.upload / 1_000_000).toFixed(2);
+                        if (summary.ping != null) pingValue.textContent = Math.round(summary.ping);
+                        if (summary.jitter != null) jitterValue.textContent = summary.jitter.toFixed(2);
+                        
+                        updateLiveSpeed(0);
+
+                        if(summary.serverLocation) {
+                            const locationParts = summary.serverLocation.split(',');
+                            serverLocation.firstElementChild.textContent = locationParts[0].trim() || 'Unknown';
+                            serverLocation.lastElementChild.textContent = locationParts.slice(1).join(',').trim();
+                        }
+                        if(summary.clientAsn) {
+                            const asnString = summary.clientAsn;
+                            const firstSpaceIndex = asnString.indexOf(' ');
+                            if (firstSpaceIndex > 0) {
+                                networkInfo.firstElementChild.textContent = asnString.substring(0, firstSpaceIndex).trim();
+                                networkInfo.lastElementChild.textContent = asnString.substring(firstSpaceIndex + 1).trim();
+                            } else {
+                                networkInfo.firstElementChild.textContent = asnString.trim();
+                                networkInfo.lastElementChild.textContent = '';
+                            }
+                        }
+                    } else {
+                        statusText.textContent = 'Could not retrieve test summary.';
+                    }
+                } else {
+                    statusText.textContent = 'Invalid test results object.';
+                }
+            } catch (error) {
+                console.error("Could not get final summary:", error);
+                statusText.textContent = 'An error occurred during final summary.';
+            }
+        };
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', () => {
+            resetUI();
+            speedTest.play();
+        });
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close');
+
+        const modalContent = {
+            about: { title: 'About Us', body: `<p>This tool provides a free analysis of your internet connection speed. Our mission is to provide a simple, fast, and accurate tool for anyone to measure their bandwidth.</p><p>This project is proudly managed by HSINI MOHAMED and is part of the doodax.com suite of tools.</p>` },
+            contact: { title: 'Contact', body: `<p>For any inquiries, questions, or feedback, please do not hesitate to reach out.</p><p>You can contact us via email at: <a href="mailto:hsini.web@gmail.com" class="text-blue-400 hover:underline">hsini.web@gmail.com</a></p><p>We typically respond within 1-2 business days.</p>` },
+            guide: { title: 'How to Use', body: `<p>Using the speed test is simple:</p><ol class="list-decimal list-inside space-y-2"><li>Click the 'GO' button to begin.</li><li>The test will first measure your latency (ping) and jitter.</li><li>Next, it will measure your download speed.</li><li>Finally, it will measure your upload speed.</li><li>Once complete, your final results will be displayed. You can click 'Retest' to run the test again.</li></ol>` },
+            privacy: { title: 'Privacy Policy', body: `<p>We respect your privacy. This website does not collect any personally identifiable information. We do collect anonymous test results, including your IP address, ISP, and speed test data, to improve our services and for aggregated statistical analysis. Your IP address is not stored long-term or shared with third parties.</p>` },
+            terms: { title: 'Terms of Service', body: `<p>By using this service (doodax.com), you agree to be bound by these terms. The service is provided "as is" without any warranties. We are not liable for any damages resulting from the use of this tool. You agree not to use this service for any unlawful purposes or to disrupt the service in any way.</p>` },
+            dmca: { title: 'DMCA', body: `<p>doodax.com respects the intellectual property of others. If you believe that your copyrighted work has been copied in a way that constitutes copyright infringement and is accessible on this site, you may notify our copyright agent, as set forth in the Digital Millennium Copyright Act of 1998 (DMCA). For your complaint to be valid under the DMCA, you must provide specific information. Please send claims to <a href="mailto:hsini.web@gmail.com" class="text-blue-400 hover:underline">hsini.web@gmail.com</a>.</p>` },
+            'header-apps': { title: 'Speedtest Apps', body: `<p>Take Speedtest with you on the go. Our free mobile and desktop apps give you the same accurate results right at your fingertips.</p><ul class="list-disc list-inside space-y-2 mt-4"><li><strong>iOS & Android:</strong> Test your speed anywhere.</li><li><strong>Windows & macOS:</strong> One-click testing from your desktop.</li><li><strong>Apple TV:</strong> Check your smart TV's connection.</li></ul>` },
+            'header-learn': { title: 'Learn About Internet Speed', body: `<p>Understand what your results mean and how you can improve your internet experience. Our guides cover everything from basic terminology to advanced troubleshooting.</p><ul class="list-disc list-inside space-y-2 mt-4"><li><strong>Glossary:</strong> Definitions for terms like Ping, Jitter, Mbps, and more.</li><li><strong>Guides:</strong> Learn how to troubleshoot your WiFi or understand what speed you really need.</li><li><strong>FAQ:</strong> Get answers to common questions about internet speed testing.</li></ul>` },
+            'header-data': { title: 'Global Internet Data', body: `<p>Explore global internet performance data with Speedtest Intelligence®. We provide insights into speed, latency, and availability for markets around the world.</p><ul class="list-disc list-inside space-y-2 mt-4"><li><strong>Speedtest Global Index™:</strong> Monthly rankings of mobile and fixed broadband speeds from around the world.</li><li><strong>Speedtest Awards™:</strong> Recognizing the top-performing networks based on consumer-initiated tests.</li><li><strong>Ookla Research™:</strong> In-depth articles and analysis on the state of global networks.</li></ul>` },
+            'header-settings': { title: 'Settings', body: `<p>Customize your Speedtest experience. While this demonstration app has limited settings, a full version would allow you to change units (Mbps/Kbps), select a test server, and manage your results history.</p>` },
+            'header-results': { title: 'Results History', body: `<p>Track your internet performance over time. A full-featured account would save all your test results, allowing you to see trends and identify issues with your connection. Sign up to start saving your history!</p>` },
+            'tool-desktop-apps': { title: 'Desktop Apps', body: `<p>Get the fastest, most convenient Speedtest experience with our free apps for Windows and macOS. With a single click, you can measure your internet performance without opening a browser. Ideal for power users who need quick, reliable results. The app sits in your menu bar or taskbar for easy access.</p><p><strong>Keywords:</strong> speed test app, desktop speedtest, windows internet speed, macos bandwidth test.</p>` },
+            'tool-troubleshoot': { title: 'Troubleshoot Your WiFi', body: `<p>Slow connection? Our guides help you diagnose and fix common internet problems. Learn how to troubleshoot issues with your router, modem, or WiFi signal. Understand what your ping and jitter results mean for activities like gaming and video calls, and find solutions to improve your connection's stability and performance.</p><p><strong>Keywords:</strong> wifi troubleshooting, slow internet, fix connection, improve ping, reduce jitter.</p>` },
+            'tool-outages': { title: 'Check for Outages', body: `<p>Is your internet down? Use services like Downdetector® to check if your ISP or other online services are experiencing outages in your area. Real-time status information from millions of user reports can help you determine if the problem is with your equipment or a wider network issue.</p><p><strong>Keywords:</strong> internet outage, isp down, check service status, downdetector.</p>` },
+            'tool-isp': { title: 'Prepare to Talk to Your ISP', body: `<p>Arm yourself with data before contacting your Internet Service Provider. Having a history of your speed test results provides concrete evidence if you're not getting the speeds you pay for. Our guides explain what information to gather and how to communicate effectively with customer support to get your issues resolved.</p><p><strong>Keywords:</strong> contact isp, internet service provider, complain about speed, slow connection fix.</p>` },
+            'tool-how-much': { title: 'How Much Speed Do You Need?', body: `<p>Understand your internet speed requirements based on your online activities. Whether you're streaming 4K video, competitive gaming, or just browsing the web, our guides help you determine the right download and upload speeds for your household. Don't overpay for bandwidth you don't need, or get stuck with a plan that's too slow.</p><p><strong>Keywords:</strong> required internet speed, good download speed, gaming bandwidth, 4k streaming speed.</p>` },
+            'tool-mobile-apps': { title: 'Download Mobile Apps', body: `<p>Test your mobile connection on the go with the Speedtest app for iOS and Android. Measure the performance of your cellular (4G, 5G) or WiFi connection with our industry-leading technology. Keep your providers honest and ensure you're getting the speed you deserve, wherever you are.</p><p><strong>Keywords:</strong> mobile speed test, ios speed test, android speed test, 5g speed test, cellular speed.</p>` },
+            'footer-account': { title: 'Your Account', body: `<p>Creating a free Speedtest account allows you to track your results history over time. See how your internet performance changes and compare results from different locations. All your tests are saved in one place for easy access.</p>` },
+            'footer-advertise': { title: 'Advertise with Us', body: `<p>Reach a global audience of tech-savvy consumers and professionals. Speedtest offers a variety of advertising opportunities to connect your brand with millions of users who care about internet performance. Contact our sales team to learn more about our advertising solutions.</p>` },
+            'footer-awards': { title: 'Speedtest Awards™', body: `<p>The Speedtest Awards recognize the top-performing mobile and fixed broadband networks in countries around the world. Our awards are based on millions of consumer-initiated tests, providing a definitive measure of real-world network performance.</p>` },
+            'footer-servers': { title: 'Speedtest Servers™', body: `<p>Our global network of thousands of test servers ensures that you get an accurate and reliable speed test result no matter where you are. Interested in hosting a Speedtest server? Join our network to help us measure and improve the internet for everyone.</p>` },
+            'footer-downdetector': { title: 'Downdetector®', body: `<p>Downdetector® offers real-time status and outage information for hundreds of services, including your ISP, favorite online games, and social media platforms. We track user reports to give you an up-to-the-minute view of service disruptions.</p>` },
+            'footer-ekahau': { title: 'Ekahau®', body: `<p>Ekahau® is the global leader in solutions for enterprise wireless network design and troubleshooting. From Wi-Fi planning software to diagnostic hardware, Ekahau helps businesses design and maintain high-performing wireless networks.</p>` },
+            'footer-rootmetrics': { title: 'RootMetrics®', body: `<p>RootMetrics® provides independent mobile network performance information to consumers and the industry. Our scientific, data-driven insights help you make more informed decisions about your mobile service.</p>` },
+            'footer-apps-android': { title: 'Android App', body: '<p>Download the Speedtest app for your Android device from the Google Play Store to test your connection speed and quality.</p>' },
+            'footer-apps-appletv': { title: 'Apple TV App', body: '<p>Get the Speedtest app for your Apple TV to check the performance of your home entertainment setup.</p>' },
+            'footer-apps-ios': { title: 'iOS App', body: '<p>Download the Speedtest app for your iPhone or iPad from the App Store to test your mobile connection on the go.</p>' },
+            'footer-apps-macos': { title: 'macOS App', body: `<p>Our native macOS app provides one-click speed testing directly from your Mac's menu bar.</p>` },
+            'footer-apps-windows': { title: 'Windows App', body: '<p>Install the Speedtest app for Windows to get the most accurate results without relying on a web browser.</p>' }
+        };
+
+        document.querySelectorAll('.modal-trigger').forEach(trigger => {
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                const modalId = e.target.dataset.modal || e.currentTarget.dataset.modal;
+                if (modalId && modalContent[modalId]) {
+                  const content = modalContent[modalId];
+                  modalTitle.textContent = content.title;
+                  modalBody.innerHTML = content.body;
+                  modal.classList.add('visible');
+                }
+            });
+        });
+        
+        const closeModal = () => modal.classList.remove('visible');
+        modalCloseBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Initial UI state
+        resetUI();
+    </script>
+</body>
+</html>

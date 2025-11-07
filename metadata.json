@@ -1,0 +1,5 @@
+{
+  "name": "Doodax SPEEDTEST",
+  "description": "A single-file, self-contained Internet Speed Test web application that measures latency, download, and upload speeds using the @cloudflare/speedtest module and vanilla JavaScript.",
+  "requestFramePermissions": []
+}
