@@ -62,3 +62,4 @@ That's it! The speed test is ready to use.
 **HSINI MOHAMED**
 -   **GitHub:** [@hsinidev](https://github.com/hsinidev)
 -   **Email:** hsini.web@gmail.com
+-   **live test:** https://speedtester.doodax.com/
